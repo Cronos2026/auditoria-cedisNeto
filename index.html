@@ -155,7 +155,7 @@ const C = {
 
 // ─── MSAL ─────────────────────────────────────────────────────────────────
 const msalConfig = {
-  auth: { clientId: CLIENT_ID, authority: `https://login.microsoftonline.com/${TENANT_ID}`, redirectUri: window.location.href.split('?')[0] },
+  auth: { clientId: CLIENT_ID, authority: `https://login.microsoftonline.com/${TENANT_ID}`, knownAuthorities: [`login.microsoftonline.com`], redirectUri: window.location.href.split('?')[0] },
   cache: { cacheLocation: "sessionStorage" }
 };
 const msalInstance = new msal.PublicClientApplication(msalConfig);
