@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría CEDIS</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#181c27;--bg3:#1e2333;
+  --border:#2a3045;--border2:#3a4460;
+  --text:#e8ecf4;--text2:#8a96b0;--text3:#5a6480;
+  --accent:#4f8ef7;--accent-bg:rgba(79,142,247,0.1);--accent-border:rgba(79,142,247,0.3);
+  --green:#3ecf8e;--green-bg:rgba(62,207,142,0.1);--green-border:rgba(62,207,142,0.3);
+  --red:#f05252;--red-bg:rgba(240,82,82,0.1);--red-border:rgba(240,82,82,0.3);
+  --yellow:#f5a623;--yellow-bg:rgba(245,166,35,0.1);--yellow-border:rgba(245,166,35,0.3);
+  --font:'Segoe UI',sans-serif;--mono:'Consolas',monospace;--r:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+.hidden{display:none!important}
+
+/* LOGIN */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;
+  background:radial-gradient(ellipse at 30% 40%,rgba(79,142,247,.07) 0%,transparent 60%),var(--bg)}
+.login-box{width:100%;max-width:380px}
+.login-logo{text-align:center;margin-bottom:2rem}
+.login-logo .brand{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;font-family:var(--mono)}
+.login-logo h1{font-size:20px;font-weight:600}
+.login-logo p{font-size:12px;color:var(--text2);margin-top:4px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1rem}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;letter-spacing:.5px;text-transform:uppercase;font-family:var(--mono)}
+.field input,.field select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);padding:9px 12px;font-family:var(--font);font-size:13px;outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--accent)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--bg3);color:var(--text)}
+.btn-primary{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-border)}
+.btn-primary:hover{background:rgba(79,142,247,.18)}
+.btn-success{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.btn-success:hover{background:rgba(62,207,142,.18)}
+.btn-danger{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+.btn-danger:hover{background:rgba(240,82,82,.18)}
+.btn-warn{background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow-border)}
+.btn-full{width:100%}
+.btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+
+/* LAYOUT */
+.app-wrap{min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1.5rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.dot{width:8px;height:8px;border-radius:50%}
+.brand-name{font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;font-family:var(--mono)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:3px;font-family:var(--mono);font-weight:500;letter-spacing:.3px}
+.tag-admin{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
+.tag-cedis{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.tag-audit{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.main{flex:1;padding:1.5rem;max-width:1400px;width:100%;margin:0 auto}
+
+/* ALERTS */
+.alert{padding:10px 14px;border-radius:var(--r);font-size:12px;margin-bottom:1rem;line-height:1.6}
+.alert-info{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.alert-success{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.alert-danger{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.alert-warn{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
+
+/* STEPS */
+.steps{display:flex;margin-bottom:1.25rem;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.step{flex:1;padding:10px;text-align:center;font-size:11px;color:var(--text3);border-right:1px solid var(--border);font-family:var(--mono)}
+.step:last-child{border-right:none}
+.step.active{color:var(--accent);background:var(--accent-bg)}
+.step.done{color:var(--green);background:var(--green-bg)}
+
+/* METRICS */
+.metrics{display:flex;gap:10px;margin-bottom:1.25rem}
+.metric{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 12px;text-align:center}
+.metric-n{font-size:24px;font-weight:600;font-family:var(--mono)}
+.metric-l{font-size:10px;color:var(--text2);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-weight:500;font-size:10px;color:var(--text3);padding:8px 10px;border-bottom:1px solid var(--border);background:var(--bg3);letter-spacing:.5px;text-transform:uppercase;font-family:var(--mono);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.sel td{background:rgba(79,142,247,.05)}
+tbody tr:hover td{background:var(--bg3)}
+.chk{cursor:pointer;user-select:none;font-size:16px}
+.chk.on{color:var(--accent)}
+.chk.off{color:var(--text3)}
+
+/* BADGE */
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-weight:500}
+.badge-neutral{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.badge-success{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge-danger{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.badge-info{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.badge-warn{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
+
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+.sec-title{font-size:14px;font-weight:600}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.ev-link{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--accent);background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:3px;padding:1px 6px;margin:1px;font-family:var(--mono)}
+
+/* SPINNER */
+.spinner-wrap{display:flex;align-items:center;justify-content:center;min-height:200px;flex-direction:column;gap:12px}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const CLIENT_ID  = "9b62563d-7618-4aea-8cff-883396fb3df6";
+const TENANT_ID  = "030e951d-6efd-42f5-8427-bab632cf8010";
+const DRIVE_HOST = "onuris-my.sharepoint.com";
+const DRIVE_USER = "945966_onuriscp_com";
+const WORKBOOK   = "Reporte%20Cedis/Justificaciones%20Gerentes/ARCHIVO%20NACIONAL%20DE%20JUSTIFICACIONES.xlsx";
+const SHEET_SRC  = "JST_fx(FORMS)";
+// Pestaña donde la app guardará universos y veredictos (se crea si no existe)
+const SHEET_APP  = "APP_AUDITORIA";
+
+const USERS = {
+  "Admin":      { pass:"Admin2026",  role:"admin",     nombre:"Administrador" },
+  "CedisVer":   { pass:"Cedis2026",  role:"cedis",     nombre:"2697 - CD VERACRUZ",      key:"2697 - CD VERACRUZ" },
+  "CedisTux":   { pass:"Cedis2026",  role:"cedis",     nombre:"9997 - CEDIS TUXTLA",     key:"9997 - CEDIS TUXTLA" },
+  "CedisMor":   { pass:"Cedis2026",  role:"cedis",     nombre:"6755 - CD MORELOS",       key:"6755 - CD MORELOS" },
+  "CedisOax":   { pass:"Cedis2026",  role:"cedis",     nombre:"2927 - CD OAXACA",        key:"2927 - CD OAXACA" },
+  "CedisEca":   { pass:"Cedis2026",  role:"cedis",     nombre:"2690 - CD ECATEPEC",      key:"2690 - CD ECATEPEC" },
+  "CedisCha":   { pass:"Cedis2026",  role:"cedis",     nombre:"3707 - CD CHALCO",        key:"3707 - CD CHALCO" },
+  "CedisLeo":   { pass:"Cedis2026",  role:"cedis",     nombre:"2695 - CD LEON",          key:"2695 - CD LEON" },
+  "CedisAca":   { pass:"Cedis2026",  role:"cedis",     nombre:"2696 - CD ACAPULCO",      key:"2696 - CD ACAPULCO" },
+  "XDVilla":    { pass:"Cedis2026",  role:"cedis",     nombre:"3769 - XD VILLAHERMOSA",  key:"3769 - XD VILLAHERMOSA" },
+  "CedisYuc":   { pass:"Cedis2026",  role:"cedis",     nombre:"3771 - CEDIS YUCATAN",    key:"3771 - CEDIS YUCATAN" },
+  "Auditoria":  { pass:"Audit2026",  role:"auditoria", nombre:"Auditoría" }
+};
+
+const C = {
+  fecha:"FECHA HORA JUSTIFICACIÓN", resp:"RESPONSABLE DE JUSTIFICACIÓN",
+  cedis:"CEDIS", folio:"FOLIO DE PEDIDO", tienda:"TIENDA",
+  just:"JUSTIFICACIONES", det:"DETALLES DE LA JUSTIFICACIÓN",
+  fAsig:"FECHA ASIGNACIÓN", cajasAsig:"CAJAS ASIGNADAS",
+  fEmb:"FECHA EMBARQUE", cajasSurt:"CAJAS SURTIDAS",
+  fRec:"FECHA RECEPCIÓN", cajasRec:"CAJAS RECIBIDAS",
+  ev1:"EVIDENCIA DE JUSTIFICACIÓN 1", ev2:"EVIDENCIA DE JUSTIFICACIÓN 2",
+  ev3:"EVIDENCIA DE JUSTIFICACIÓN 3", ev4:"EVIDENCIA DE JUSTIFICACIÓN 4",
+  ev5:"EVIDENCIA DE JUSTIFICACIÓN 5"
+};
+
+// ─── MSAL ─────────────────────────────────────────────────────────────────
+const msalConfig = {
+  auth: { clientId: CLIENT_ID, authority: `https://login.microsoftonline.com/${TENANT_ID}`, redirectUri: window.location.href.split('?')[0] },
+  cache: { cacheLocation: "sessionStorage" }
+};
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+const SCOPES = ["Files.ReadWrite", "Sites.ReadWrite.All", "User.Read"];
+
+let msToken = null;
+
+async function getToken() {
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length === 0) {
+    const res = await msalInstance.loginPopup({ scopes: SCOPES });
+    msToken = res.accessToken; return msToken;
+  }
+  try {
+    const res = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: accounts[0] });
+    msToken = res.accessToken; return msToken;
+  } catch(e) {
+    const res = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
+    msToken = res.accessToken; return msToken;
+  }
+}
+
+// ─── GRAPH API ────────────────────────────────────────────────────────────
+const BASE = `https://graph.microsoft.com/v1.0/users/${DRIVE_USER}@onuriscp.com/drive/root:/${WORKBOOK}`;
+
+async function graphGet(path) {
+  const tok = await getToken();
+  const r = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${tok}` } });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function graphPatch(path, body) {
+  const tok = await getToken();
+  const r = await fetch(`${BASE}${path}`, {
+    method: "PATCH", headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function graphPost(path, body) {
+  const tok = await getToken();
+  const r = await fetch(`${BASE}${path}`, {
+    method: "POST", headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// Lee todas las filas de una pestaña
+async function readSheet(sheetName) {
+  try {
+    const enc = encodeURIComponent(sheetName);
+    const data = await graphGet(`:/workbook/worksheets/${enc}/usedRange`);
+    if (!data.values || data.values.length < 2) return [];
+    const headers = data.values[0].map(h => (h||"").toString().trim());
+    return data.values.slice(1).map(row => {
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = (row[i] !== undefined ? row[i].toString() : ""));
+      return obj;
+    }).filter(o => Object.values(o).some(v => v));
+  } catch(e) { return []; }
+}
+
+// Escribe filas completas en APP_AUDITORIA (sobreescribe)
+async function writeAppSheet(rows) {
+  const enc = encodeURIComponent(SHEET_APP);
+  // Ensure sheet exists
+  try { await graphGet(`:/workbook/worksheets/${enc}`); }
+  catch(e) { await graphPost(`:/workbook/worksheets`, { name: SHEET_APP }); }
+
+  const headers = ["CEDIS","FOLIO","TIENDA","JUSTIFICACION","FECHA_ASIG","CAJAS_ASIG","CAJAS_REC","EV1","EV2","EV3","EV4","EV5","UNIVERSO_STATUS","MUESTRA","MUESTRA_RES"];
+  const values = [headers, ...rows.map(r => headers.map(h => r[h]||""))];
+  const range = `A1:O${values.length}`;
+  await graphPatch(`:/workbook/worksheets/${enc}/range(address='${range}')`, { values });
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────
+let S = {
+  screen: "login", user: null,
+  loginU: "", loginP: "", loginErr: "",
+  loading: false, loadMsg: "",
+  allRows: [],   // filas del Excel fuente
+  myRows: [],    // filas filtradas por CEDIS
+  appRows: [],   // filas de APP_AUDITORIA
+  selRows: [],   // indices en myRows seleccionados para universo
+  universo: [],  // filas ya enviadas como universo
+  universoStatus: null,
+  muestra: [],   // indices en universo
+  muestraRes: {} // {idx: "ok"|"nok"}
+};
+
+const root = document.getElementById("root");
+function render() {
+  if (S.screen === "login")     renderLogin();
+  else if (S.screen === "loading") renderLoading();
+  else if (S.screen === "admin")   renderAdmin();
+  else if (S.screen === "cedis")   renderCedis();
+  else if (S.screen === "auditoria") renderAuditoria();
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────
+function renderLogin() {
+  root.innerHTML = `
+  <div class="login-wrap"><div class="login-box">
+    <div class="login-logo">
+      <div class="brand">Sistema de Auditoría</div>
+      <h1>Justificaciones CEDIS</h1>
+      <p>Entregas a destiempo</p>
+    </div>
+    <div class="card">
+      ${S.loginErr ? `<div class="alert alert-danger">${S.loginErr}</div>` : ""}
+      <div class="field"><label>Usuario</label><input id="ui" type="text" autocomplete="username"></div>
+      <div class="field"><label>Contraseña</label><input id="pi" type="password" autocomplete="current-password"></div>
+      <button class="btn btn-primary btn-full" style="margin-top:4px" onclick="doLogin()">Entrar →</button>
+    </div>
+    <p style="text-align:center;font-size:11px;color:var(--text3);margin-top:8px">Se solicitará autenticación Microsoft al entrar.</p>
+  </div></div>`;
+  const ui = document.getElementById("ui"), pi = document.getElementById("pi");
+  ui.value = S.loginU; pi.value = S.loginP;
+  ui.oninput = e => S.loginU = e.target.value;
+  pi.oninput = e => S.loginP = e.target.value;
+  pi.onkeydown = e => { if(e.key==="Enter") doLogin(); };
+  ui.onkeydown = e => { if(e.key==="Enter") pi.focus(); };
+}
+
+async function doLogin() {
+  const u = S.loginU.trim(), p = S.loginP;
+  const match = Object.entries(USERS).find(([k]) => k.toLowerCase() === u.toLowerCase());
+  if (!match || match[1].pass !== p) { S.loginErr = "Usuario o contraseña incorrectos."; render(); return; }
+  S.user = { ...match[1], ukey: match[0] }; S.loginErr = "";
+  S.screen = "loading"; S.loadMsg = "Conectando con Microsoft..."; render();
+  try {
+    await getToken();
+    S.loadMsg = "Cargando datos...";
+    render();
+    await loadData();
+    S.screen = S.user.role;
+    render();
+  } catch(e) {
+    S.screen = "login"; S.loginErr = "Error de autenticación: " + e.message; render();
+  }
+}
+
+async function loadData() {
+  // Cargar datos fuente
+  S.allRows = await readSheet(SHEET_SRC);
+  // Cargar estado de app
+  S.appRows = await readSheet(SHEET_APP);
+  // Derivar estado de universo para este CEDIS
+  if (S.user.role === "cedis") {
+    S.myRows = S.allRows.filter(r => (r[C.cedis]||"").trim().toUpperCase() === S.user.key.toUpperCase());
+    const myApp = S.appRows.filter(r => (r["CEDIS"]||"").trim().toUpperCase() === S.user.key.toUpperCase());
+    if (myApp.length > 0) {
+      S.universo = myApp.map(r => ({
+        [C.folio]: r["FOLIO"], [C.tienda]: r["TIENDA"], [C.just]: r["JUSTIFICACION"],
+        [C.fAsig]: r["FECHA_ASIG"], [C.cajasAsig]: r["CAJAS_ASIG"], [C.cajasRec]: r["CAJAS_REC"],
+        [C.det]: "", [C.cedis]: r["CEDIS"],
+        [C.ev1]: r["EV1"],[C.ev2]: r["EV2"],[C.ev3]: r["EV3"],[C.ev4]: r["EV4"],[C.ev5]: r["EV5"]
+      }));
+      S.universoStatus = myApp[0]["UNIVERSO_STATUS"] || null;
+      if (!S.universoStatus) S.universoStatus = null;
+    } else {
+      S.universo = []; S.universoStatus = null;
+    }
+    S.selRows = []; S.muestra = []; S.muestraRes = {};
+  }
+  if (S.user.role === "auditoria") {
+    // Tomar universo de appRows (todos los CEDIS)
+    S.universo = S.appRows.map(r => ({
+      [C.folio]: r["FOLIO"], [C.tienda]: r["TIENDA"], [C.just]: r["JUSTIFICACION"],
+      [C.fAsig]: r["FECHA_ASIG"], [C.cajasAsig]: r["CAJAS_ASIG"], [C.cajasRec]: r["CAJAS_REC"],
+      [C.cedis]: r["CEDIS"],
+      [C.ev1]: r["EV1"],[C.ev2]: r["EV2"],[C.ev3]: r["EV3"],[C.ev4]: r["EV4"],[C.ev5]: r["EV5"],
+      _status: r["UNIVERSO_STATUS"], _muestra: r["MUESTRA"], _muestraRes: r["MUESTRA_RES"]
+    }));
+    S.muestra = []; S.muestraRes = {};
+    // Restaurar muestra y resultados previos
+    S.universo.forEach((row,i) => {
+      if(row._muestra === "SI") S.muestra.push(i);
+      if(row._muestraRes) S.muestraRes[i] = row._muestraRes;
+    });
+    S.universoStatus = S.appRows.length > 0 ? (S.appRows[0]["UNIVERSO_STATUS"]||null) : null;
+  }
+}
+
+function renderLoading() {
+  root.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div><p style="color:var(--text2);font-size:13px">${S.loadMsg}</p></div>`;
+}
+
+function doLogout() {
+  S = { screen:"login", user:null, loginU:"", loginP:"", loginErr:"", loading:false, loadMsg:"",
+        allRows:[], myRows:[], appRows:[], selRows:[], universo:[], universoStatus:null,
+        muestra:[], muestraRes:{} };
+  render();
+}
+
+// ─── ADMIN ────────────────────────────────────────────────────────────────
+function renderAdmin() {
+  const total = S.allRows.length;
+  const cedisCount = [...new Set(S.allRows.map(r => r[C.cedis]).filter(v=>v))].length;
+  root.innerHTML = `
+  <div class="app-wrap">
+    <div class="topbar">
+      <div class="topbar-brand">
+        <div class="dot" style="background:var(--yellow)"></div>
+        <span class="brand-name">Administrador</span>
+        <span class="tag tag-admin">ADMIN</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn" onclick="doLogout()">Salir</button>
+      </div>
+    </div>
+    <div class="main">
+      <div class="metrics">
+        <div class="metric"><div class="metric-n" style="color:var(--accent)">${total}</div><div class="metric-l">Registros totales</div></div>
+        <div class="metric"><div class="metric-n" style="color:var(--yellow)">${cedisCount}</div><div class="metric-l">CEDIS con datos</div></div>
+        <div class="metric"><div class="metric-n" style="color:var(--green)">${S.appRows.filter(r=>r["UNIVERSO_STATUS"]==="aprobado").length}</div><div class="metric-l">Folios aprobados</div></div>
+        <div class="metric"><div class="metric-n" style="color:var(--red)">${S.appRows.filter(r=>r["UNIVERSO_STATUS"]==="rechazado").length}</div><div class="metric-l">Folios rechazados</div></div>
+      </div>
+      <div class="card">
+        <div class="sec-hdr">
+          <div class="sec-title">Estado por CEDIS</div>
+          <button class="btn btn-primary" onclick="refreshAdmin()">↺ Refrescar</button>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>CEDIS</th><th>Registros fuente</th><th>Universo enviado</th><th>Estado</th></tr></thead>
+          <tbody>${Object.values(USERS).filter(u=>u.role==="cedis").map(u=>{
+            const src = S.allRows.filter(r=>(r[C.cedis]||"").trim().toUpperCase()===u.key.toUpperCase()).length;
+            const app = S.appRows.filter(r=>(r["CEDIS"]||"").trim().toUpperCase()===u.key.toUpperCase());
+            const st = app.length > 0 ? (app[0]["UNIVERSO_STATUS"]||"pendiente") : "sin universo";
+            const badge = st==="aprobado"?"badge-success":st==="rechazado"?"badge-danger":st==="pendiente"?"badge-warn":"badge-neutral";
+            return `<tr><td style="font-family:var(--mono)">${u.nombre}</td><td>${src}</td><td>${app.length}</td><td><span class="badge ${badge}">${st.toUpperCase()}</span></td></tr>`;
+          }).join("")}</tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="sec-hdr">
+          <div class="sec-title">Vista previa — ${total} registros en ${SHEET_SRC}</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Folio</th><th>CEDIS</th><th>Tienda</th><th>Justificación</th><th>F. Asignación</th><th>Cajas Asig.</th><th>Cajas Rec.</th></tr></thead>
+          <tbody>${S.allRows.slice(0,50).map(r=>`<tr>
+            <td style="font-family:var(--mono)">${r[C.folio]||""}</td>
+            <td>${r[C.cedis]||""}</td><td>${r[C.tienda]||""}</td>
+            <td>${r[C.just]||""}</td><td>${r[C.fAsig]||""}</td>
+            <td style="text-align:center">${r[C.cajasAsig]||""}</td>
+            <td style="text-align:center">${r[C.cajasRec]||""}</td>
+          </tr>`).join("")}
+          ${total>50?`<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:12px">... y ${total-50} registros más</td></tr>`:""}
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function refreshAdmin() {
+  S.screen = "loading"; S.loadMsg = "Actualizando..."; render();
+  await loadData();
+  S.screen = "admin"; render();
+}
+
+// ─── CEDIS ────────────────────────────────────────────────────────────────
+function renderCedis() {
+  const closed = S.universo.length > 0;
+  const rows = S.myRows;
+  root.innerHTML = `
+  <div class="app-wrap">
+    <div class="topbar">
+      <div class="topbar-brand">
+        <div class="dot" style="background:var(--accent)"></div>
+        <span class="brand-name">${S.user.nombre}</span>
+        <span class="tag tag-cedis">CEDIS</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn" onclick="refreshCedis()">↺ Actualizar</button>
+        <button class="btn" onclick="doLogout()">Salir</button>
+      </div>
+    </div>
+    <div class="main">
+      <div class="steps">
+        <div class="step ${!closed?'active':'done'}">01 Seleccionar universo</div>
+        <div class="step ${closed&&!S.universoStatus?'active':''}">02 Esperando auditoría</div>
+        <div class="step ${S.universoStatus?'active':''}">03 Resultado</div>
+      </div>
+
+      ${S.universoStatus==="aprobado"?`<div class="alert alert-success">✓ <strong>Universo aprobado.</strong> Auditoría dio visto bueno a los ${S.universo.length} pedidos.
+        <button class="btn btn-success" style="margin-left:10px" onclick="descargarCSV('aprobado')">↓ Descargar aprobados</button>
+      </div>`:""}
+      ${S.universoStatus==="rechazado"?`<div class="alert alert-danger">✗ <strong>Universo rechazado.</strong> La muestra no pasó la revisión de auditoría.
+        <button class="btn btn-danger" style="margin-left:10px" onclick="descargarCSV('rechazado')">↓ Descargar rechazados</button>
+      </div>`:""}
+      ${closed&&!S.universoStatus?`<div class="alert alert-warn">⏳ Universo enviado (${S.universo.length} pedidos). En espera de revisión por auditoría. Usa "Actualizar" para ver cambios.</div>`:""}
+
+      ${!closed ? `
+      <div class="card">
+        <div class="sec-hdr">
+          <div class="sec-title">Pedidos justificados — ${rows.length} registros</div>
+          <div class="btn-row">
+            <button class="btn" onclick="selAll(true)">Todos</button>
+            <button class="btn" onclick="selAll(false)">Ninguno</button>
+            <button class="btn btn-primary" onclick="enviarUniverso()" ${S.selRows.length===0?"disabled":""}>Enviar universo (${S.selRows.length}) →</button>
+          </div>
+        </div>
+        ${rows.length===0?`<div class="alert alert-warn">⚠ No hay pedidos para <strong>${S.user.key}</strong>. El administrador debe refrescar los datos.</div>`:`
+        <div class="tbl-wrap"><table>
+          <thead><tr><th></th><th>Folio</th><th>Tienda</th><th>Justificación</th><th>Detalle</th><th>F. Asig.</th><th>Cajas Asig.</th><th>Cajas Rec.</th><th>Evidencias</th></tr></thead>
+          <tbody id="ct"></tbody>
+        </table></div>`}
+      </div>` : `
+      <div class="card">
+        <div class="sec-hdr">
+          <div class="sec-title">Universo enviado — ${S.universo.length} pedidos</div>
+          <div class="btn-row">
+            ${S.universoStatus?`<button class="btn btn-warn" onclick="descargarCSV(S.universoStatus)">↓ Descargar resultado</button>`:""}
+            ${S.universoStatus?`<button class="btn" onclick="resetUniverso()">↺ Nuevo universo</button>`:""}
+          </div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Folio</th><th>Tienda</th><th>Justificación</th><th>F. Asig.</th><th>Cajas Asig.</th><th>Cajas Rec.</th><th>Estado</th></tr></thead>
+          <tbody>${S.universo.map(r=>`<tr>
+            <td style="font-family:var(--mono);font-weight:500">${r[C.folio]||""}</td>
+            <td>${r[C.tienda]||""}</td><td>${r[C.just]||""}</td>
+            <td>${r[C.fAsig]||""}</td>
+            <td style="text-align:center">${r[C.cajasAsig]||""}</td>
+            <td style="text-align:center">${r[C.cajasRec]||""}</td>
+            <td><span class="badge ${S.universoStatus==='aprobado'?'badge-success':S.universoStatus==='rechazado'?'badge-danger':'badge-neutral'}">${(S.universoStatus||"PENDIENTE").toUpperCase()}</span></td>
+          </tr>`).join("")}</tbody>
+        </table></div>
+      </div>`}
+    </div>
+  </div>`;
+  if (!closed && rows.length > 0) bindCedisTable();
+}
+
+function bindCedisTable() {
+  const tb = document.getElementById("ct"); if(!tb) return;
+  S.myRows.forEach((row,i) => {
+    const sel = S.selRows.includes(i);
+    const evs = [row[C.ev1],row[C.ev2],row[C.ev3],row[C.ev4],row[C.ev5]].filter(v=>v&&v.trim());
+    const tr = document.createElement("tr");
+    if(sel) tr.classList.add("sel");
+    tr.innerHTML = `
+      <td class="chk ${sel?'on':'off'}" onclick="toggleRow(${i})">${sel?'☑':'☐'}</td>
+      <td style="font-family:var(--mono);font-weight:500">${row[C.folio]||""}</td>
+      <td>${row[C.tienda]||""}</td><td>${row[C.just]||""}</td>
+      <td style="max-width:180px;color:var(--text2)">${row[C.det]||""}</td>
+      <td>${row[C.fAsig]||""}</td>
+      <td style="text-align:center">${row[C.cajasAsig]||""}</td>
+      <td style="text-align:center">${row[C.cajasRec]||""}</td>
+      <td>${evs.map((ev,ei)=>`<a class="ev-link" href="${ev}" target="_blank">EV${ei+1}</a>`).join("")||'<span style="color:var(--text3)">—</span>'}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function toggleRow(i) { const idx=S.selRows.indexOf(i); if(idx>=0)S.selRows.splice(idx,1);else S.selRows.push(i); render(); }
+function selAll(v) { S.selRows = v ? S.myRows.map((_,i)=>i) : []; render(); }
+
+async function enviarUniverso() {
+  if(S.selRows.length===0) return;
+  S.screen="loading"; S.loadMsg="Guardando universo..."; render();
+  try {
+    const seleccionados = S.selRows.map(i=>S.myRows[i]);
+    // Quitar filas previas de este CEDIS en appRows
+    const otrosCedis = S.appRows.filter(r=>(r["CEDIS"]||"").trim().toUpperCase()!==S.user.key.toUpperCase());
+    const nuevasFilas = seleccionados.map(r=>({
+      CEDIS: r[C.cedis]||"", FOLIO: r[C.folio]||"", TIENDA: r[C.tienda]||"",
+      JUSTIFICACION: r[C.just]||"", FECHA_ASIG: r[C.fAsig]||"",
+      CAJAS_ASIG: r[C.cajasAsig]||"", CAJAS_REC: r[C.cajasRec]||"",
+      EV1: r[C.ev1]||"", EV2: r[C.ev2]||"", EV3: r[C.ev3]||"",
+      EV4: r[C.ev4]||"", EV5: r[C.ev5]||"",
+      UNIVERSO_STATUS: "", MUESTRA: "", MUESTRA_RES: ""
+    }));
+    const todasFilas = [...otrosCedis, ...nuevasFilas];
+    await writeAppSheet(todasFilas);
+    S.appRows = todasFilas;
+    S.universo = seleccionados; S.universoStatus = null; S.selRows = [];
+    S.screen = "cedis"; render();
+  } catch(e) { S.screen="cedis"; alert("Error guardando universo: "+e.message); render(); }
+}
+
+async function refreshCedis() {
+  S.screen="loading"; S.loadMsg="Actualizando..."; render();
+  await loadData();
+  S.screen="cedis"; render();
+}
+
+async function resetUniverso() {
+  S.screen="loading"; S.loadMsg="Limpiando universo..."; render();
+  const otras = S.appRows.filter(r=>(r["CEDIS"]||"").trim().toUpperCase()!==S.user.key.toUpperCase());
+  await writeAppSheet(otras);
+  S.appRows=otras; S.universo=[]; S.universoStatus=null; S.selRows=[];
+  S.screen="cedis"; render();
+}
+
+function descargarCSV(status) {
+  const headers = ["FOLIO DE PEDIDO","CEDIS","TIENDA","JUSTIFICACIONES","FECHA ASIGNACIÓN","CAJAS ASIGNADAS","CAJAS RECIBIDAS","RESULTADO"];
+  const rows = S.universo.map(r => [
+    r[C.folio]||"", r[C.cedis]||S.user.key, r[C.tienda]||"",
+    r[C.just]||"", r[C.fAsig]||"", r[C.cajasAsig]||"", r[C.cajasRec]||"",
+    status.toUpperCase()
+  ]);
+  const csv = [headers, ...rows].map(r=>r.map(v=>`"${v}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `universo_${S.user.key.replace(/\s/g,"_")}_${status}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ─── AUDITORÍA ────────────────────────────────────────────────────────────
+function renderAuditoria() {
+  const noUniv = S.universo.length === 0;
+  const decidido = !!S.universoStatus;
+  const okC = Object.values(S.muestraRes).filter(v=>v==="ok").length;
+  const nokC = Object.values(S.muestraRes).filter(v=>v==="nok").length;
+  const allMarked = S.muestra.length>0 && S.muestra.every(i=>S.muestraRes[i]);
+
+  // Agrupar universo por CEDIS para mostrar estado
+  const cedisList = [...new Set(S.universo.map(r=>r[C.cedis]||r["CEDIS"]).filter(v=>v))];
+
+  root.innerHTML = `
+  <div class="app-wrap">
+    <div class="topbar">
+      <div class="topbar-brand">
+        <div class="dot" style="background:var(--green)"></div>
+        <span class="brand-name">Auditoría</span>
+        <span class="tag tag-audit">AUDITOR</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn" onclick="refreshAuditoria()">↺ Actualizar</button>
+        <button class="btn" onclick="doLogout()">Salir</button>
+      </div>
+    </div>
+    <div class="main">
+      ${noUniv?`<div class="alert alert-warn">⏳ Ningún CEDIS ha enviado universo todavía. Usa "Actualizar" para verificar.</div>`:`
+      <div class="metrics">
+        <div class="metric"><div class="metric-n" style="color:var(--accent)">${S.universo.length}</div><div class="metric-l">En universo</div></div>
+        <div class="metric"><div class="metric-n" style="color:var(--text)">${S.muestra.length}</div><div class="metric-l">En muestra</div></div>
+        <div class="metric"><div class="metric-n" style="color:var(--green)">${okC}</div><div class="metric-l">Aprobados</div></div>
+        <div class="metric"><div class="metric-n" style="color:var(--red)">${nokC}</div><div class="metric-l">Rechazados</div></div>
+      </div>
+
+      ${decidido?`<div class="alert ${S.universoStatus==='aprobado'?'alert-success':'alert-danger'}">
+        ${S.universoStatus==='aprobado'?'✓':'✗'} <strong>Veredicto emitido:</strong>
+        ${S.universoStatus==='aprobado'?`Universo <strong>APROBADO</strong> — ${S.universo.length} pedidos con visto bueno.`:`Universo <strong>RECHAZADO</strong>.`}
+        <button class="btn" style="margin-left:10px" onclick="resetVeredicto()">↺ Nueva revisión</button>
+      </div>`:""}
+
+      ${S.muestra.length>0&&!decidido?`
+      <div class="card">
+        <div class="sec-title" style="margin-bottom:.5rem">Emitir veredicto</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:1rem;line-height:1.6">
+          Si apruebas, <strong>todos los pedidos del universo (${S.universo.length})</strong> quedan aprobados para todos los CEDIS involucrados.<br>
+          Si rechazas, todo el universo queda rechazado.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-success" onclick="emitirVeredicto('aprobado')" ${!allMarked?"disabled":""}>✓ Aprobar universo completo</button>
+          <button class="btn btn-danger" onclick="emitirVeredicto('rechazado')">✗ Rechazar universo</button>
+        </div>
+        ${!allMarked?`<p style="font-size:11px;color:var(--text3);margin-top:8px">* Marca ✓ o ✗ en cada folio de la muestra para habilitar "Aprobar".</p>`:""}
+      </div>`:""}
+
+      <div class="card">
+        <div class="sec-hdr">
+          <div class="sec-title">Universo completo — ${S.universo.length} folios de ${cedisList.length} CEDIS</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th></th><th>Folio</th><th>CEDIS</th><th>Tienda</th><th>Justificación</th><th>F. Asig.</th><th>Cajas Asig.</th><th>Cajas Rec.</th><th>Evidencias</th><th>Resultado</th></tr></thead>
+          <tbody id="at"></tbody>
+        </table></div>
+      </div>`}
+    </div>
+  </div>`;
+  if (!noUniv) bindAuditTable();
+}
+
+function bindAuditTable() {
+  const tb = document.getElementById("at"); if(!tb) return;
+  S.universo.forEach((row,i) => {
+    const inM = S.muestra.includes(i);
+    const res = S.muestraRes[i];
+    const evs = [row[C.ev1]||row["EV1"],row[C.ev2]||row["EV2"],row[C.ev3]||row["EV3"],row[C.ev4]||row["EV4"],row[C.ev5]||row["EV5"]].filter(v=>v&&v.trim());
+    const tr = document.createElement("tr");
+    if(inM) tr.classList.add("sel");
+    tr.innerHTML = `
+      <td class="chk ${inM?'on':'off'}" onclick="toggleMuestra(${i})">${inM?'☑':'☐'}</td>
+      <td style="font-family:var(--mono);font-weight:500">${row[C.folio]||row["FOLIO"]||""}</td>
+      <td style="font-size:11px;color:var(--text2)">${row[C.cedis]||row["CEDIS"]||""}</td>
+      <td>${row[C.tienda]||row["TIENDA"]||""}</td>
+      <td>${row[C.just]||row["JUSTIFICACION"]||""}</td>
+      <td>${row[C.fAsig]||row["FECHA_ASIG"]||""}</td>
+      <td style="text-align:center">${row[C.cajasAsig]||row["CAJAS_ASIG"]||""}</td>
+      <td style="text-align:center">${row[C.cajasRec]||row["CAJAS_REC"]||""}</td>
+      <td>${evs.map((ev,ei)=>`<a class="ev-link" href="${ev}" target="_blank">EV${ei+1}</a>`).join("")||'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${inM?`<div style="display:flex;gap:5px">
+        <button class="btn ${res==='ok'?'btn-success':''}" style="padding:4px 10px" onclick="marcarRes(${i},'ok')">✓</button>
+        <button class="btn ${res==='nok'?'btn-danger':''}" style="padding:4px 10px" onclick="marcarRes(${i},'nok')">✗</button>
+      </div>`:`<span class="badge badge-neutral">—</span>`}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function toggleMuestra(i) { const idx=S.muestra.indexOf(i); if(idx>=0){S.muestra.splice(idx,1);delete S.muestraRes[i];}else S.muestra.push(i); render(); }
+function marcarRes(i,v) { S.muestraRes[i]=v; render(); }
+
+async function emitirVeredicto(v) {
+  S.screen="loading"; S.loadMsg="Guardando veredicto..."; render();
+  try {
+    const updated = S.appRows.map((r,i) => ({
+      ...r,
+      UNIVERSO_STATUS: v,
+      MUESTRA: S.muestra.includes(i) ? "SI" : "",
+      MUESTRA_RES: S.muestraRes[i] || ""
+    }));
+    await writeAppSheet(updated);
+    S.appRows = updated; S.universoStatus = v;
+    S.screen="auditoria"; render();
+  } catch(e) { S.screen="auditoria"; alert("Error guardando veredicto: "+e.message); render(); }
+}
+
+async function resetVeredicto() {
+  S.screen="loading"; S.loadMsg="Reiniciando..."; render();
+  const updated = S.appRows.map(r=>({...r, UNIVERSO_STATUS:"", MUESTRA:"", MUESTRA_RES:""}));
+  await writeAppSheet(updated);
+  S.appRows=updated; S.universoStatus=null; S.muestra=[]; S.muestraRes={};
+  S.screen="auditoria"; render();
+}
+
+async function refreshAuditoria() {
+  S.screen="loading"; S.loadMsg="Actualizando..."; render();
+  await loadData();
+  S.screen="auditoria"; render();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
